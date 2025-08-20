@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { UtilityContract, Crew, TimeEntry, Exception, User } from '../types';
 import { contractService, crewService, timeEntryService, exceptionService, userService } from '../services/supabaseService';
+import { sampleUtilityContracts, sampleCrews, sampleTimeEntries, sampleExceptions, sampleUsers } from '../data/sampleData';
 
 interface AppState {
   selectedContract: UtilityContract | null;
@@ -111,41 +112,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Load data from Supabase
     const loadData = async () => {
       try {
-        // Try to load data, but handle missing tables gracefully
-        let contracts = [];
-        let crews = [];
-        let timeEntries = [];
-        let exceptions = [];
-        let users = [];
+        // Try to load data from Supabase, but fall back to sample data
+        let contracts = sampleUtilityContracts;
+        let crews = sampleCrews;
+        let timeEntries = sampleTimeEntries;
+        let exceptions = sampleExceptions;
+        let users = sampleUsers;
 
         try {
-          contracts = await contractService.getContracts();
+          const supabaseContracts = await contractService.getContracts();
+          if (supabaseContracts.length > 0) {
+            contracts = supabaseContracts;
+          }
         } catch (error) {
-          console.warn('Could not load contracts:', error);
+          console.warn('Could not load contracts from Supabase, using sample data:', error);
         }
 
         try {
-          crews = await crewService.getCrews();
+          const supabaseCrews = await crewService.getCrews();
+          if (supabaseCrews.length > 0) {
+            crews = supabaseCrews;
+          }
         } catch (error) {
-          console.warn('Could not load crews:', error);
+          console.warn('Could not load crews from Supabase, using sample data:', error);
         }
 
         try {
-          timeEntries = await timeEntryService.getTimeEntries();
+          const supabaseTimeEntries = await timeEntryService.getTimeEntries();
+          if (supabaseTimeEntries.length > 0) {
+            timeEntries = supabaseTimeEntries;
+          }
         } catch (error) {
-          console.warn('Could not load time entries:', error);
+          console.warn('Could not load time entries from Supabase, using sample data:', error);
         }
 
         try {
-          exceptions = await exceptionService.getExceptions();
+          const supabaseExceptions = await exceptionService.getExceptions();
+          if (supabaseExceptions.length > 0) {
+            exceptions = supabaseExceptions;
+          }
         } catch (error) {
-          console.warn('Could not load exceptions:', error);
+          console.warn('Could not load exceptions from Supabase, using sample data:', error);
         }
 
         try {
-          users = await userService.getUsers();
+          const supabaseUsers = await userService.getUsers();
+          if (supabaseUsers.length > 0) {
+            users = supabaseUsers;
+          }
         } catch (error) {
-          console.warn('Could not load users:', error);
+          console.warn('Could not load users from Supabase, using sample data:', error);
         }
 
         dispatch({ 
@@ -161,8 +177,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         });
       } catch (error) {
-        console.warn('Some data could not be loaded. Please ensure your Supabase database is set up correctly:', error);
-        dispatch({ type: 'SET_LOADING', payload: false });
+        console.warn('Could not load data from Supabase, using sample data:', error);
+        // Fall back to sample data completely
+        dispatch({ 
+          type: 'LOAD_DATA', 
+          payload: {
+            utilityContracts: sampleUtilityContracts,
+            crews: sampleCrews,
+            timeEntries: sampleTimeEntries,
+            exceptions: sampleExceptions,
+            users: sampleUsers,
+            selectedContract: sampleUtilityContracts[0] || null,
+            loading: false
+          }
+        });
       }
     };
 
