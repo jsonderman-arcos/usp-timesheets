@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { UtilityContract, Crew, TimeEntry, Exception, User } from '../types';
-import { sampleUtilityContracts, sampleCrews, sampleTimeEntries, sampleExceptions, sampleUsers } from '../data/sampleData';
+import { contractService, crewService, timeEntryService, exceptionService, userService } from '../services/supabaseService';
 
 interface AppState {
   selectedContract: UtilityContract | null;
@@ -108,28 +108,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    // Load data from localStorage or use sample data
-    const loadData = () => {
+    // Load data from Supabase
+    const loadData = async () => {
       try {
-        const savedData = localStorage.getItem('uspAdmin_appData');
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          dispatch({ type: 'LOAD_DATA', payload: parsedData });
-        } else {
-          // Initialize with sample data
-          dispatch({ 
-            type: 'LOAD_DATA', 
-            payload: {
-              utilityContracts: sampleUtilityContracts,
-              crews: sampleCrews,
-              timeEntries: sampleTimeEntries,
-              exceptions: sampleExceptions,
-              users: sampleUsers,
-              selectedContract: sampleUtilityContracts[0],
-              loading: false
-            }
-          });
-        }
+        const [contracts, crews, timeEntries, exceptions, users] = await Promise.all([
+          contractService.getContracts(),
+          crewService.getCrews(),
+          timeEntryService.getTimeEntries(),
+          exceptionService.getExceptions(),
+          userService.getUsers()
+        ]);
+
+        dispatch({ 
+          type: 'LOAD_DATA', 
+          payload: {
+            utilityContracts: contracts,
+            crews,
+            timeEntries,
+            exceptions,
+            users,
+            selectedContract: contracts[0] || null,
+            loading: false
+          }
+        });
       } catch (error) {
         console.error('Error loading app data:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -138,21 +139,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     loadData();
   }, []);
-
-  // Save to localStorage whenever state changes
-  useEffect(() => {
-    if (!state.loading) {
-      const dataToSave = {
-        utilityContracts: state.utilityContracts,
-        crews: state.crews,
-        timeEntries: state.timeEntries,
-        exceptions: state.exceptions,
-        users: state.users,
-        selectedContract: state.selectedContract
-      };
-      localStorage.setItem('uspAdmin_appData', JSON.stringify(dataToSave));
-    }
-  }, [state]);
 
   const setSelectedContract = (contract: UtilityContract | null) => {
     dispatch({ type: 'SET_SELECTED_CONTRACT', payload: contract });

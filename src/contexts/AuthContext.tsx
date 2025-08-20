@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
-import { sampleUsers } from '../data/sampleData';
+import { userService } from '../services/supabaseService';
+import { supabase } from '../lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -55,47 +56,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    // Load user from localStorage on app start
-    const savedUser = localStorage.getItem('uspAdmin_user');
-    if (savedUser) {
+    // Check for existing session
+    const checkSession = async () => {
       try {
-        const user = JSON.parse(savedUser);
-        dispatch({ type: 'LOAD_USER', payload: user });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const user = await userService.getCurrentUser();
+          dispatch({ type: 'LOAD_USER', payload: user });
+        } else {
+          dispatch({ type: 'LOAD_USER', payload: null });
+        }
       } catch (error) {
+        console.error('Error checking session:', error);
         dispatch({ type: 'LOAD_USER', payload: null });
       }
-    } else {
-      dispatch({ type: 'LOAD_USER', payload: null });
-    }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const user = await userService.getCurrentUser();
+        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'LOGOUT' });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     dispatch({ type: 'LOGIN_START' });
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // For demo purposes, accept any password for existing users
-    const user = sampleUsers.find(u => u.username === username && u.active);
-    
-    if (user) {
-      const updatedUser = { ...user, lastLogin: new Date().toISOString() };
-      localStorage.setItem('uspAdmin_user', JSON.stringify(updatedUser));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: updatedUser });
+    try {
+      // For demo, we'll use username as email for now
+      const email = username.includes('@') ? username : `${username}@onesource.com`;
+      await userService.signIn(email, password);
       return true;
-    } else {
+    } catch (error) {
+      console.error('Login error:', error);
       dispatch({ type: 'LOGIN_FAILURE' });
       return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('uspAdmin_user');
-    dispatch({ type: 'LOGOUT' });
+    userService.signOut();
   };
 
   const updateUser = (user: User) => {
-    localStorage.setItem('uspAdmin_user', JSON.stringify(user));
     dispatch({ type: 'UPDATE_USER', payload: user });
   };
 
