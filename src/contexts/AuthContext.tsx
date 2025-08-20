@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // For demo, we'll use username as email for now
-      const email = username.includes('@') ? username : `${username}@onesource.com`;
+      const email = username.includes('@') ? username : `${username}@uspcontractor.com`;
       await userService.signIn(email, password);
       return true;
     } catch (error) {
