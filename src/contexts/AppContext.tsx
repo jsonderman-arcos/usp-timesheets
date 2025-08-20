@@ -111,13 +111,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Load data from Supabase
     const loadData = async () => {
       try {
-        const [contracts, crews, timeEntries, exceptions, users] = await Promise.all([
-          contractService.getContracts(),
-          crewService.getCrews(),
-          timeEntryService.getTimeEntries(),
-          exceptionService.getExceptions(),
-          userService.getUsers()
-        ]);
+        // Try to load data, but handle missing tables gracefully
+        let contracts = [];
+        let crews = [];
+        let timeEntries = [];
+        let exceptions = [];
+        let users = [];
+
+        try {
+          contracts = await contractService.getContracts();
+        } catch (error) {
+          console.warn('Could not load contracts:', error);
+        }
+
+        try {
+          crews = await crewService.getCrews();
+        } catch (error) {
+          console.warn('Could not load crews:', error);
+        }
+
+        try {
+          timeEntries = await timeEntryService.getTimeEntries();
+        } catch (error) {
+          console.warn('Could not load time entries:', error);
+        }
+
+        try {
+          exceptions = await exceptionService.getExceptions();
+        } catch (error) {
+          console.warn('Could not load exceptions:', error);
+        }
+
+        try {
+          users = await userService.getUsers();
+        } catch (error) {
+          console.warn('Could not load users:', error);
+        }
 
         dispatch({ 
           type: 'LOAD_DATA', 
@@ -132,7 +161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         });
       } catch (error) {
-        console.error('Error loading app data:', error);
+        console.warn('Some data could not be loaded. Please ensure your Supabase database is set up correctly:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
