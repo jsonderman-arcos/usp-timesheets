@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
 import { userService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
+import { sampleUsers } from '../data/sampleData';
 
 interface AuthState {
   user: User | null;
@@ -89,6 +90,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string): Promise<boolean> => {
     dispatch({ type: 'LOGIN_START' });
+    
+    // Check if this is a demo user first
+    const demoUser = sampleUsers.find(user => 
+      user.username === username || user.email === username
+    );
+    
+    if (demoUser) {
+      // Simulate successful login for demo users
+      dispatch({ type: 'LOGIN_SUCCESS', payload: demoUser });
+      return true;
+    }
     
     try {
       // For demo, we'll use username as email for now
